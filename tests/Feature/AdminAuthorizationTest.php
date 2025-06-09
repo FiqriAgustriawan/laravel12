@@ -1,5 +1,5 @@
 <?php
-// filepath: d:\docs_pelajaran\KK1web\larv_12\lat_1\tests\Feature\AdminAuthorizationTest.php
+
 
 namespace Tests\Feature;
 
@@ -43,12 +43,10 @@ class AdminAuthorizationTest extends TestCase
         $token = $admin->createToken('test-token')->plainTextToken;
 
         $filmData = [
-            'judul' => 'New Test Film',
-            'deskripsi' => 'A test film description',
+            'judul' => 'Test Film',
+            'deskripsi' => 'Test',
             'harga_tiket' => 50000.00,
-            'poster_url' => 'https://example.com/image.jpg',
-            'tanggal_rilis' => '2024-12-01',
-            'durasi' => '120 menit'
+            'durasi' => 120 // PERBAIKAN: Gunakan integer, bukan string
         ];
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)

@@ -44,16 +44,16 @@ class Film extends Model
 
         // Generate unique filename
         $filename = 'film_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-        
+
         // Store file in public disk under film-posters directory
         $path = $file->storeAs('film-posters', $filename, 'public');
-        
+
         // Update model with just the path (not full URL)
         $this->update(['poster_url' => $path]);
-        
+
         return $path;
     }
-    
+
     /**
      * Delete poster file
      */
@@ -62,13 +62,13 @@ class Film extends Model
         if ($this->poster_url) {
             // Get the original database value (not the accessor)
             $originalValue = $this->getOriginal('poster_url');
-            
+
             if ($originalValue && Storage::disk('public')->exists($originalValue)) {
                 Storage::disk('public')->delete($originalValue);
             }
         }
     }
-    
+
     /**
      * Get full URL for poster
      */
@@ -77,12 +77,12 @@ class Film extends Model
         if (!$value) {
             return null;
         }
-        
+
         // If it's already a full URL, return as is
         if (Str::startsWith($value, ['http://', 'https://'])) {
             return $value;
         }
-        
+
         // Convert storage path to public URL
         return asset('storage/' . $value);
     }
@@ -92,29 +92,14 @@ class Film extends Model
         return $this->hasMany(Pemesanan::class);
     }
 
-    /**
-     * Override the route key name - use slug for public routes only
-     * For admin routes, we'll use ID by default
-     */
-    public function getRouteKeyName()
-    {
-        // Check if current route is admin route
-        if (request()->is('api/admin/*')) {
-            return 'id'; // Use ID for admin routes
-        }
-        return 'slug'; // Use slug for public routes
-    }
-
-    /**
-     * Generate slug from judul
-     */
+ 
     public static function generateSlug($judul)
     {
         $slug = Str::slug($judul);
         $originalSlug = $slug;
         $counter = 1;
 
-        // Check if slug already exists and increment if needed
+
         while (static::where('slug', $slug)->exists()) {
             $slug = $originalSlug . '-' . $counter;
             $counter++;
@@ -141,10 +126,21 @@ class Film extends Model
                 $film->slug = static::generateSlug($film->judul);
             }
         });
-        
-        // Delete poster when model is deleted
+
+     
         static::deleting(function ($film) {
             $film->deletePoster();
         });
+    }
+
+   
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeBySlug($query, $slug)
+    {
+        return $query->where('slug', $slug);
     }
 }

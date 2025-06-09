@@ -6,45 +6,34 @@ use App\Http\Controllers\Api\PemesananController;
 use App\Http\Controllers\Api\PasswordResetController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
-
 // Public routes
-Route::post('/register', [AuthController::class, 'register'])->name('api.register');
-Route::post('/login', [AuthController::class, 'login'])->name('api.login');
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
 
-// Password Reset Routes
-Route::post('/password/forgot', [PasswordResetController::class, 'sendResetLink'])->name('api.password.forgot');
-Route::post('/password/reset', [PasswordResetController::class, 'resetPassword'])->name('api.password.reset');
-Route::post('/password/verify-token', [PasswordResetController::class, 'verifyToken'])->name('api.password.verify-token');
 
-// Film routes
-Route::get('/films', [FilmController::class, 'index'])->name('api.films.index');
-Route::get('/films/{film:slug}', [FilmController::class, 'show'])->name('api.films.show');
+Route::post('/password/forgot', [PasswordResetController::class, 'sendResetLink']);
+Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
+
+
+Route::get('/films', [FilmController::class, 'index']);
+Route::get('/films/{slug}', [FilmController::class, 'show']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth routes
-    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
-    Route::get('/profile', [AuthController::class, 'profile'])->name('api.profile');
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [AuthController::class, 'profile']);
 
     // Booking routes
-    Route::apiResource('pemesanan', PemesananController::class)->names([
-        'index' => 'api.pemesanan.index',
-        'store' => 'api.pemesanan.store',
-        'show' => 'api.pemesanan.show',
-        'update' => 'api.pemesanan.update',
-        'destroy' => 'api.pemesanan.destroy',
-    ]);
+    Route::apiResource('pemesanan', PemesananController::class);
 
-    // Admin routes
-    Route::middleware(['admin'])->prefix('admin')->group(function () {
-        Route::get('/films', [FilmController::class, 'listAll']);
-        Route::post('/films', [FilmController::class, 'store']);
-        Route::put('/films/{film}', [FilmController::class, 'update']); // Uses ID
-        Route::delete('/films/{film}', [FilmController::class, 'destroy']); // Uses ID
+   
+    Route::middleware(['admin'])->group(function () {
+        Route::prefix('admin')->group(function () {
+            Route::get('/films', [FilmController::class, 'listAll']);
+            Route::post('/films', [FilmController::class, 'store']); 
+            Route::get('/films/{id}', [FilmController::class, 'showById']);
+            Route::put('/films/{id}', [FilmController::class, 'update']);
+            Route::delete('/films/{id}', [FilmController::class, 'destroy']);
+        });
     });
 });

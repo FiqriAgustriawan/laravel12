@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 class PemesananController extends Controller
 {
     /**
-     * Menampilkan semua pemesanan (admin) atau pemesanan user (user biasa)
+     * Menampilkan daftar pemesanan
      */
     public function index(Request $request)
     {

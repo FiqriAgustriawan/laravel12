@@ -21,8 +21,7 @@ class FilmResource extends JsonResource
             'is_active' => $this->is_active,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            // URL untuk mengakses detail film
-            'url' => route('api.films.show', $this->slug),
+            'url' => '/films/' . $this->slug,
         ];
     }
 }

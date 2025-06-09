@@ -1,5 +1,5 @@
 <?php
-// filepath: d:\docs_pelajaran\KK1web\larv_12\lat_1\tests\Feature\FilmApiTest.php
+
 
 namespace Tests\Feature;
 
@@ -61,7 +61,7 @@ class FilmApiTest extends TestCase
             'harga_tiket' => 50000.00,
             'poster_url' => 'https://example.com/image.jpg',
             'tanggal_rilis' => '2024-12-01',
-            'durasi' => '120 menit'
+            'durasi' => 120 
         ];
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
@@ -132,7 +132,7 @@ class FilmApiTest extends TestCase
         ];
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->putJson("/api/films/{$film->slug}", $updateData);
+            ->putJson("/api/films/{$film->id}", $updateData); // Gunakan ID, bukan slug
 
         $response->assertStatus(200)
             ->assertJson([
@@ -156,7 +156,7 @@ class FilmApiTest extends TestCase
         $film = Film::factory()->create();
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->deleteJson("/api/films/{$film->slug}");
+            ->deleteJson("/api/films/{$film->id}"); // Gunakan ID, bukan slug
 
         $response->assertStatus(200)
             ->assertJson([

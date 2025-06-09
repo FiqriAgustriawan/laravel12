@@ -41,10 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
     ]);
 
     // Admin routes
-    Route::middleware('admin')->group(function () {
-        Route::get('/admin/films', [FilmController::class, 'listAll'])->name('api.admin.films');
-        Route::post('/films', [FilmController::class, 'store'])->name('api.films.store');
-        Route::put('/films/{film:slug}', [FilmController::class, 'update'])->name('api.films.update');
-        Route::delete('/films/{film:slug}', [FilmController::class, 'destroy'])->name('api.films.destroy');
+    Route::middleware(['admin'])->prefix('admin')->group(function () {
+        Route::get('/films', [FilmController::class, 'listAll']);
+        Route::post('/films', [FilmController::class, 'store']);
+        Route::put('/films/{film}', [FilmController::class, 'update']); // Uses ID
+        Route::delete('/films/{film}', [FilmController::class, 'destroy']); // Uses ID
     });
 });

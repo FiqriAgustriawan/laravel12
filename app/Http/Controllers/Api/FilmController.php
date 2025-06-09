@@ -43,14 +43,13 @@ class FilmController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'judul' => 'required|string|max:100',
-            'slug' => 'nullable|string|unique:films,slug|max:120', // Optional manual slug
-            'poster' => 'nullable|image|max:2048',
-            'poster_url' => 'nullable|url',
+            'judul' => 'required|string|max:255',
+            'slug' => 'nullable|string|unique:films,slug|max:255',
+            'poster' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'harga_tiket' => 'required|numeric|min:0',
             'deskripsi' => 'nullable|string',
             'tanggal_rilis' => 'nullable|date',
-            'durasi' => 'nullable|string',
+            'durasi' => 'nullable|integer|min:1',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -59,27 +58,21 @@ class FilmController extends Controller
             $validated['slug'] = Film::generateSlug($validated['judul']);
         }
 
-        // Proses poster (file atau URL)
-        if ($request->hasFile('poster')) {
-            $path = $request->file('poster')->store('posters', 'public');
-            $posterUrl = Storage::url($path);
-        } elseif ($request->filled('poster_url')) {
-            $posterUrl = $request->poster_url;
-        } else {
-            $posterUrl = null;
-        }
-
-        // Buat film dengan data yang sudah divalidasi
+        // Create film first
         $film = Film::create([
             'judul' => $validated['judul'],
             'slug' => $validated['slug'],
-            'poster_url' => $posterUrl,
             'harga_tiket' => $validated['harga_tiket'],
-            'deskripsi' => $request->deskripsi,
-            'tanggal_rilis' => $request->tanggal_rilis,
-            'durasi' => $request->durasi,
-            'is_active' => $request->is_active ?? true,
+            'deskripsi' => $validated['deskripsi'] ?? null,
+            'tanggal_rilis' => $validated['tanggal_rilis'] ?? null,
+            'durasi' => $validated['durasi'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
         ]);
+
+        // Handle poster upload
+        if ($request->hasFile('poster')) {
+            $film->uploadPoster($request->file('poster'));
+        }
 
         return new FilmResource($film);
     }
@@ -90,50 +83,35 @@ class FilmController extends Controller
     public function update(Request $request, Film $film)
     {
         $validated = $request->validate([
-            'judul' => 'sometimes|required|string|max:100',
-            'slug' => 'nullable|string|unique:films,slug,' . $film->id . '|max:120',
-            'poster' => 'nullable|image|max:2048',
-            'poster_url' => 'nullable|url',
+            'judul' => 'sometimes|required|string|max:255',
+            'slug' => 'sometimes|string|unique:films,slug,' . $film->id . '|max:255',
+            'poster' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'harga_tiket' => 'sometimes|required|numeric|min:0',
             'deskripsi' => 'nullable|string',
             'tanggal_rilis' => 'nullable|date',
-            'durasi' => 'nullable|string',
+            'durasi' => 'nullable|integer|min:1',
             'is_active' => 'nullable|boolean',
         ]);
 
-        // Data untuk update
-        $filmData = [
-            'judul' => $request->judul ?? $film->judul,
-            'harga_tiket' => $request->harga_tiket ?? $film->harga_tiket,
-            'deskripsi' => $request->deskripsi ?? $film->deskripsi,
-            'tanggal_rilis' => $request->tanggal_rilis ?? $film->tanggal_rilis,
-            'durasi' => $request->durasi ?? $film->durasi,
-            'is_active' => $request->is_active ?? $film->is_active,
-        ];
-
-        // Update slug jika judul berubah atau slug baru disediakan
-        if ($request->filled('judul') && $request->judul !== $film->judul) {
-            $filmData['slug'] = $request->filled('slug') ? 
-                $validated['slug'] : 
-                Film::generateSlug($request->judul);
-        } elseif ($request->filled('slug')) {
-            $filmData['slug'] = $validated['slug'];
-        }
-        
-        // Proses poster (file atau URL)
-        if ($request->hasFile('poster')) {
-            if ($film->poster_url && Str::startsWith($film->poster_url, '/storage/posters/')) {
-                $oldPath = Str::replaceFirst('/storage', 'public', $film->poster_url);
-                Storage::delete($oldPath);
-            }
-            
-            $path = $request->file('poster')->store('posters', 'public');
-            $filmData['poster_url'] = Storage::url($path);
-        } elseif ($request->filled('poster_url')) {
-            $filmData['poster_url'] = $request->poster_url;
-        }
+        // Update film data
+        $filmData = array_filter([
+            'judul' => $validated['judul'] ?? null,
+            'slug' => $validated['slug'] ?? null,
+            'harga_tiket' => $validated['harga_tiket'] ?? null,
+            'deskripsi' => $request->deskripsi,
+            'tanggal_rilis' => $request->tanggal_rilis,
+            'durasi' => $validated['durasi'] ?? null,
+            'is_active' => $validated['is_active'] ?? null,
+        ], function($value) {
+            return $value !== null;
+        });
 
         $film->update($filmData);
+
+        // Handle poster upload
+        if ($request->hasFile('poster')) {
+            $film->uploadPoster($request->file('poster'));
+        }
 
         return new FilmResource($film);
     }
@@ -141,14 +119,33 @@ class FilmController extends Controller
     /**
      * Menghapus film
      */
-    public function destroy(Film $film)
+    public function destroy($id)
     {
-        if ($film->poster_url && Str::startsWith($film->poster_url, '/storage/posters/')) {
-            $oldPath = Str::replaceFirst('/storage', 'public', $film->poster_url);
-            Storage::delete($oldPath);
+        try {
+            // Find film by ID
+            $film = Film::findOrFail($id);
+            
+            // Delete poster file using the model method
+            $film->deletePoster();
+            
+            // Delete film record
+            $film->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Film berhasil dihapus'
+            ], 200);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Film tidak ditemukan'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus film: ' . $e->getMessage()
+            ], 500);
         }
-        
-        $film->delete();
-        return response()->json(['message' => 'Film berhasil dihapus']);
     }
 }
